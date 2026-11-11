@@ -4,7 +4,7 @@
 
 面向中国出口企业：把一条真实询盘变成有成本依据、可复算、可比较、须独立审核的销售报价。它不是供应商搜索器、ERP、自动退税计算器，也不是让大模型自行决定底价。
 
-目标 GitHub 仓库：`magicy565-web/trade-pricing-engine`。本交付含本地源码与发布脚本；**本次没有创建 GitHub 远程仓库、没有推送，也没有运行 GitHub Actions**。当前连接仅可读，工作环境没有 GitHub 写入凭据。不要把目标仓库名当作已经存在的链接。
+正式 GitHub 仓库：[magicy565-web/trade-pricing-engine](https://github.com/magicy565-web/trade-pricing-engine)。已于 2026-11-11 通过授权 GitHub 接口发布独立源码，首个完整源码提交为 `5c31c6cdd7df56c2017a9e8dc05f365794af8e13`。原本地版本的 Git 文件树 SHA `cd18142e11cfcb50a4f68cb059da68719ff0e57c` 与该发布提交的文件树完全一致（78 个文件）。
 
 ## 已实现
 
@@ -92,24 +92,13 @@ python scripts/export_schemas.py
 
 具体证据见 `verification/pytest.xml`、`verification/live-smoke.json`、`verification/ui-render.json`，边界见 `docs/VERIFICATION.md`。
 
-## 创建独立 GitHub 仓库
+## GitHub 发布与校验
 
-在已经安装 Git 与 GitHub CLI 的本机完成登录，然后运行：
-
-```sh
-gh auth login
-python scripts/publish_github.py --owner magicy565-web --name trade-pricing-engine
-```
-
-脚本验证当前 GitHub 登录账号，默认创建**私有**仓库；不允许换掉现有 origin、不强推、不覆盖已有非空仓库、拒绝已追踪的私钥/令牌/数据库。推送后读回远程 `main` 的 SHA，必须与本地 HEAD 相同才报告成功。
-
-离线检查发布计划：
-
-```sh
-python scripts/publish_github.py --dry-run
-```
-
-若先前创建了私有空仓库但推送中断，人工核对后可加 `--resume-empty`。脚本仅在远程确实没有任何分支时继续。该发布流程在本次仅执行离线检查，**未拿真实 GitHub 写入权限验证**。
+- 正式仓库：https://github.com/magicy565-web/trade-pricing-engine
+- 2026-11-11 已发布完整初版 78 个文件，包含应用源码、MCP、Schema、测试和验证截图。后续文档提交不会更改最初完整源码提交的内容哈希。
+- GitHub Actions 已触发，但首次运行 [#42962695257](https://github.com/magicy565-web/trade-pricing-engine/actions/runs/42962695257) 返回失败；4 个 job 均未返回可用执行步骤，无法由此认定代码测试失败或通过。Linux 本地 102 项测试与 8 项进程联调的证据仍见 `verification/`。
+- **当前仓库为公开可见，但没有授予开源许可证**。项目所有者如希望其他开发者使用、修改或分发，应明确选择许可证。公开可读不等于开放授权。
+- `scripts/publish_github.py` 保留为**新建私有仓库**的安全发布辅助脚本；它会拒绝向已存在的公开仓库执行发布，请不要在本仓库重复运行。
 
 ## 目录
 
@@ -127,4 +116,4 @@ scripts/                  发布、备份、验收、Schema 导出
 tests/                   隔离测试与显式合成夹具
 ```
 
-后续设计见 `docs/ARCHITECTURE.md`；API 与核算口径见 `docs/API.md`；部署、安全、恢复见 `docs/SECURITY.md`。本仓库未授予公开开源许可，公开发布前由所有者选择许可。
+后续设计见 `docs/ARCHITECTURE.md`；API 与核算口径见 `docs/API.md`；部署、安全、恢复见 `docs/SECURITY.md`。本仓库当前公开可读，但尚未授予任何开源许可证；对外授权和许可证选择由项目所有者决定。

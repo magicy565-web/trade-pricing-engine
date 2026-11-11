@@ -1,4 +1,5 @@
-No public open-source license is granted by this delivery.
+This repository is publicly readable, but it has no open-source license.
+All rights are reserved unless the owner grants a separate license.
 Repository owner: magicy565-web.
-Select an appropriate license before changing the repository to public.
-Third-party dependencies retain their own licenses; their source is not vendored here.
+Third-party dependencies retain their respective licenses; their source is not vendored here.
+Choose and add an appropriate LICENSE file before presenting this software as open source.

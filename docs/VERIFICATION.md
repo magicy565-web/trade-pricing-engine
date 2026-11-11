@@ -19,6 +19,13 @@
 
 ## 没有完成
 
-GitHub 远程创建/推送、GitHub Actions 执行、真实 OpenMausBot 宿主连接、Windows 实机运行、真实企业财务验收、真实渠道发送、外部访问与部署、独立渗透测试、依赖漏洞扫描、第三方税务/关税/物流数据接入。
+GitHub Actions 成功运行、真实 OpenMausBot 宿主连接、Windows 实机运行、真实企业财务验收、真实渠道发送、外部访问与部署、独立渗透测试、依赖漏洞扫描、第三方税务/关税/物流数据接入。
 
 公开演示或正式销售之前应先选一家企业，用真实询盘与财务资料复核一轮。不要把“本地测试通过”换成“已验证外贸增收”。
+
+## 2026-11-11 GitHub 发布补充验证
+
+- 仓库由所有者预先创建，采用授权 GitHub 写入接口发布到 `main`；首个完整源码提交：`5c31c6cdd7df56c2017a9e8dc05f365794af8e13`。
+- 完整源码树：`cd18142e11cfcb50a4f68cb059da68719ff0e57c`，与本地 v0.1.0 Git tree SHA 完全一致（78 个文件，其中 2 张 PNG 截图）。
+- 首次 GitHub Actions 运行：https://github.com/magicy565-web/trade-pricing-engine/actions/runs/42962695257 ，状态 `failure`。4 个 job 的 `steps` 都为空，日志未能通过 API 取得；无法据此定位根因，也不宣称 GitHub CI 通过。
+- 仓库为 `public`；尚无开源许可证，不要自动宣称为开源项目。
