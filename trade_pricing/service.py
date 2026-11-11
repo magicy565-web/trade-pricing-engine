@@ -4,9 +4,10 @@ from datetime import datetime, timezone
 from typing import Callable
 from uuid import uuid4
 import json
+from pydantic import ValidationError
 from .models import (CaseInput, CostBook, FxBook, Policy, NewCase, ReviseCase, SaveCostBook,
                      SaveFxBook, SavePolicy, RevokeSnapshot, Calculation, QuoteAction, Approval,
-                     CompareInput, CashPlan)
+                     CompareInput, CashPlan, PromoteScenario, WithdrawQuote, PageQuery, SnapshotQuery)
 from .store import Store
 from .errors import DomainError
 from .core.money import canonical, digest
@@ -61,14 +62,27 @@ class PricingService:
         return value
 
     def list_cases(self, actor):
+        """In-process convenience reader; HTTP/MCP use bounded pages."""
+        items, before = [], None
+        while True:
+            page = self.case_page(actor, PageQuery(limit=100, before=before))
+            items.extend(page["cases"])
+            before = page["next_cursor"]
+            if before is None:
+                return items
+
+    def case_page(self, actor, query: PageQuery | None = None):
+        query = query or PageQuery()
         with self.store.connection() as con:
-            rows = con.execute("SELECT * FROM cases WHERE tenant=? ORDER BY updated_at DESC LIMIT 200", (actor.tenant,))
-            return [{"id": r["id"], "revision": r["revision"], "case": json.loads(r["payload"])} for r in rows]
+            rows = con.execute("SELECT rowid AS cursor,* FROM cases WHERE tenant=? AND (? IS NULL OR rowid<?) ORDER BY rowid DESC LIMIT ?",
+                               (actor.tenant, query.before, query.before, query.limit + 1)).fetchall()
+            return {"cases": [{"id": r["id"], "revision": r["revision"], "case": json.loads(r["payload"])} for r in rows[:query.limit]],
+                    "next_cursor": rows[query.limit - 1]["cursor"] if len(rows) > query.limit else None}
 
     def get_case(self, actor, case_id):
         with self.store.connection() as con:
             r = self._case(con, actor, case_id)
-            quotes = con.execute("SELECT id,state,version,hash FROM quotes WHERE tenant=? AND case_id=? ORDER BY created_at DESC",
+            quotes = con.execute("SELECT id,state,version,hash FROM quotes WHERE tenant=? AND case_id=? ORDER BY rowid DESC",
                                  (actor.tenant, case_id)).fetchall()
             return {"id": r["id"], "revision": r["revision"], "case": json.loads(r["payload"]),
                     "quotes": [dict(x) for x in quotes]}
@@ -115,9 +129,45 @@ class PricingService:
         return self._mutate(actor, req, f"snapshot.confirm:{kind}", action)
 
     def list_snapshots(self, actor):
+        """In-process convenience reader; HTTP/MCP use bounded pages."""
+        items, before = [], None
+        while True:
+            page = self.snapshot_page(actor, SnapshotQuery(limit=100, before=before))
+            items.extend(page["snapshots"])
+            before = page["next_cursor"]
+            if before is None:
+                return items
+
+    def snapshot_page(self, actor, query: SnapshotQuery | None = None):
+        query = query or SnapshotQuery()
         with self.store.connection() as con:
-            rows = con.execute("SELECT id,kind,hash,confirmed_by,created_at,revoked_at,payload FROM snapshots WHERE tenant=? ORDER BY created_at DESC LIMIT 300", (actor.tenant,))
-            return [{**dict(r), "payload": json.loads(r["payload"])} for r in rows]
+            rows = con.execute("""SELECT rowid AS cursor,id,kind,hash,confirmed_by,created_at,revoked_at,payload
+                FROM snapshots WHERE tenant=? AND (? IS NULL OR kind=?)
+                AND (?=0 OR revoked_at IS NULL) AND (? IS NULL OR rowid<?)
+                ORDER BY rowid DESC LIMIT ?""",
+                (actor.tenant, query.kind, query.kind, query.active_only, query.before, query.before, query.limit + 1)).fetchall()
+            items = []
+            for row in rows[:query.limit]:
+                value = dict(row)
+                value.pop("cursor")
+                value["payload"] = self._snapshot(con, actor, row["id"], row["kind"], allow_revoked=True)
+                items.append(value)
+            return {"snapshots": items,
+                    "next_cursor": rows[query.limit - 1]["cursor"] if len(rows) > query.limit else None}
+
+    def get_snapshot(self, actor, sid):
+        with self.store.connection() as con:
+            row = con.execute("SELECT * FROM snapshots WHERE id=? AND tenant=?", (sid, actor.tenant)).fetchone()
+            if row is None:
+                raise DomainError("NOT_FOUND", "Snapshot not found", 404)
+            return {"id": sid, "kind": row["kind"], "content_hash": row["hash"],
+                    "confirmed_by": row["confirmed_by"], "revoked_at": row["revoked_at"],
+                    "payload": self._snapshot(con, actor, sid, row["kind"], allow_revoked=True)}
+
+    def current_policy(self, actor):
+        page = self.snapshot_page(actor, SnapshotQuery(kind="policy", active_only=True, limit=1))
+        return {"policy": page["snapshots"][0] if page["snapshots"] else None,
+                "note": "Current means not revoked; evidence validity is checked again when calculating."}
 
     def revoke_snapshot(self, actor, sid, req: RevokeSnapshot):
         require(actor, "admin")
@@ -142,21 +192,58 @@ class PricingService:
             if r["revision"] != req.expected_revision:
                 raise DomainError("VERSION_CONFLICT", "Case revision changed", 409)
             case = CaseInput.model_validate_json(r["payload"])
-            costs, fx, policy = self._inputs(con, actor, req.cost_snapshot_id, req.fx_snapshot_id, req.policy_snapshot_id)
-            now = self.clock()
-            result = calculate(case, costs, fx, policy, req.proposed_unit_price, now)
-            payload = {"seller_name": self.seller_name, "case": case.model_dump(mode="json"),
-                       "case_revision": r["revision"], "cost_snapshot_id": req.cost_snapshot_id,
-                       "fx_snapshot_id": req.fx_snapshot_id, "policy_snapshot_id": req.policy_snapshot_id,
-                       "cost_book": costs.model_dump(mode="json"), "fx_book": fx.model_dump(mode="json"),
-                       "policy": policy.model_dump(mode="json"), "lead_time_days": costs.lead_time_days,
-                       "proposed_unit_price": req.proposed_unit_price, "result": result}
-            qid, content_hash = identifier("quote"), digest(payload)
-            con.execute("INSERT INTO quotes VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                        (qid, actor.tenant, case_id, r["revision"], canonical(payload), content_hash,
-                         "draft", 1, actor.name, now.isoformat(), now.isoformat()))
-            return {"id": qid, "state": "draft", "version": 1, "content_hash": content_hash, **payload}
+            return self._create_quote(con, actor, case_id, r["revision"], case, req)
         return self._mutate(actor, req, f"quote.calculate:{case_id}", action)
+
+    def _create_quote(self, con, actor, case_id, revision, case, req):
+        costs, fx, policy = self._inputs(con, actor, req.cost_snapshot_id, req.fx_snapshot_id, req.policy_snapshot_id)
+        now = self.clock()
+        result = calculate(case, costs, fx, policy, req.proposed_unit_price, now)
+        payload = {"seller_name": self.seller_name, "case": case.model_dump(mode="json"),
+                   "case_revision": revision, "cost_snapshot_id": req.cost_snapshot_id,
+                   "fx_snapshot_id": req.fx_snapshot_id, "policy_snapshot_id": req.policy_snapshot_id,
+                   "cost_book": costs.model_dump(mode="json"), "fx_book": fx.model_dump(mode="json"),
+                   "policy": policy.model_dump(mode="json"), "lead_time_days": costs.lead_time_days,
+                   "proposed_unit_price": req.proposed_unit_price, "result": result}
+        qid, content_hash = identifier("quote"), digest(payload)
+        con.execute("INSERT INTO quotes VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                    (qid, actor.tenant, case_id, revision, canonical(payload), content_hash,
+                     "draft", 1, actor.name, now.isoformat(), now.isoformat()))
+        return {"id": qid, "state": "draft", "version": 1, "content_hash": content_hash, **payload}
+
+    def _scenario_case(self, base, opt, label="scenario"):
+        overrides = {"quantity": opt.quantity}
+        for key in ("incoterm", "named_place", "transport", "fca_delivery", "payment_terms"):
+            if getattr(opt, key) is not None:
+                overrides[key] = getattr(opt, key)
+        if opt.incoterm is not None and opt.incoterm != "FCA":
+            overrides["fca_delivery"] = None
+        try:
+            return CaseInput.model_validate({**base, **overrides})
+        except ValidationError as exc:
+            details = "; ".join(e["msg"] for e in exc.errors())
+            raise DomainError("INVALID_SCENARIO", f"{label}: {details}", 422) from None
+
+    def promote_scenario(self, actor, case_id, req: PromoteScenario):
+        """Revalidate and apply an alternative atomically; never transfers approval."""
+        require(actor, "admin", "agent")
+        def action(con):
+            row = self._case(con, actor, case_id)
+            if row["revision"] != req.expected_revision:
+                raise DomainError("VERSION_CONFLICT", "Case changed; compare again before selecting", 409)
+            case = self._scenario_case(json.loads(row["payload"]), req.scenario)
+            revision = row["revision"] + 1
+            calculation = Calculation(request_id=req.request_id, expected_revision=revision,
+                cost_snapshot_id=req.scenario.cost_snapshot_id, fx_snapshot_id=req.fx_snapshot_id,
+                policy_snapshot_id=req.policy_snapshot_id, proposed_unit_price=req.scenario.proposed_unit_price)
+            quote = self._create_quote(con, actor, case_id, revision, case, calculation)
+            if quote["result"]["blockers"]:
+                raise DomainError("SCENARIO_BLOCKED", "; ".join(quote["result"]["blockers"]), 409)
+            con.execute("UPDATE cases SET payload=?,revision=?,updated_at=? WHERE id=? AND tenant=?",
+                        (canonical(case.model_dump(mode="json")), revision, self.clock().isoformat(), case_id, actor.tenant))
+            return {"case_id": case_id, "case_revision": revision, "quote": quote,
+                    "approval_required": True, "delivery_status": "NOT_SENT"}
+        return self._mutate(actor, req, f"case.promote_scenario:{case_id}", action)
 
     def compare(self, actor, case_id, req: CompareInput):
         with self.store.connection() as con:
@@ -165,20 +252,15 @@ class PricingService:
                 raise DomainError("VERSION_CONFLICT", "Case revision changed", 409)
             base = json.loads(row["payload"])
             rows = []
-            for opt in req.scenarios:
-                overrides = {"quantity": opt.quantity}
-                for key in ("incoterm", "named_place", "transport", "fca_delivery", "payment_terms"):
-                    if getattr(opt, key) is not None:
-                        overrides[key] = getattr(opt, key)
-                if opt.incoterm is not None and opt.incoterm != "FCA":
-                    overrides["fca_delivery"] = None
-                case = CaseInput.model_validate({**base, **overrides})
+            for index, opt in enumerate(req.scenarios):
+                case = self._scenario_case(base, opt, f"scenarios[{index}]")
                 costs, fx, policy = self._inputs(con, actor, opt.cost_snapshot_id, req.fx_snapshot_id, req.policy_snapshot_id)
                 rows.append({"label": opt.label, "quantity": opt.quantity,
-                             "cost_snapshot_id": opt.cost_snapshot_id, "terms": {k: getattr(case,k) for k in ("incoterm","named_place","transport","payment_terms")},
+                             "cost_snapshot_id": opt.cost_snapshot_id, "terms": {k: getattr(case,k) for k in ("incoterm","named_place","transport","fca_delivery","payment_terms")},
                              "result": calculate(case, costs, fx, policy, opt.proposed_unit_price, self.clock())})
             return {"scenarios": rows, "method": "explicit supplied alternatives; no invented volume discount",
-                    "promote_to_quote": "revise case to chosen quantity/terms/payment conditions, then calculate and submit approval"}
+                    "case_revision": row["revision"],
+                    "promote_to_quote": "Use promote_pricing_scenario with this revision and the selected input; it revalidates evidence and creates a new unapproved draft atomically."}
 
     def _quote(self, con, actor, qid):
         r = con.execute("SELECT * FROM quotes WHERE id=? AND tenant=?", (qid, actor.tenant)).fetchone()
@@ -191,6 +273,8 @@ class PricingService:
         return result
 
     def _fresh(self, con, actor, row):
+        if row["state"] == "withdrawn":
+            raise DomainError("QUOTE_WITHDRAWN", "Quote withdrawn; customer export and finalization are disabled", 409)
         current = self._case(con, actor, row["case_id"])
         if current["revision"] != row["case_revision"]:
             raise DomainError("QUOTE_STALE", "Case changed after this quote was calculated", 409)
@@ -210,8 +294,11 @@ class PricingService:
                 self._fresh(con, actor, row)
             except DomainError as exc:
                 issue = {"code": exc.code, "message": exc.message}
+            decisions = con.execute("SELECT actor,decision,content_hash,reason,created_at FROM approvals WHERE tenant=? AND quote_id=? ORDER BY id",
+                                    (actor.tenant, qid)).fetchall()
             return {"id": row["id"], "state": row["state"], "version": row["version"],
-                    "content_hash": row["hash"], "current_blocker": issue, **row["payload"]}
+                    "content_hash": row["hash"], "current_blocker": issue,
+                    "decisions": [dict(d) for d in decisions], **row["payload"]}
 
     def _check_action(self, row, req):
         if row["version"] != req.expected_version or row["hash"] != req.content_hash:
@@ -257,6 +344,21 @@ class PricingService:
             return result
         return self._mutate(actor, req, f"quote.finalize:{qid}", action)
 
+    def withdraw(self, actor, qid, req: WithdrawQuote):
+        require(actor, "approver")
+        def action(con):
+            row = self._quote(con, actor, qid)
+            self._check_action(row, req)
+            if row["state"] not in ("draft", "pending_approval", "approved", "issued"):
+                raise DomainError("INVALID_TRANSITION", "This quote is already rejected or withdrawn", 409)
+            # Withdrawal must remain possible even after expiry, revision or evidence revocation.
+            con.execute("INSERT INTO approvals(tenant,quote_id,actor,decision,content_hash,reason,created_at) VALUES(?,?,?,?,?,?,?)",
+                        (actor.tenant, qid, actor.name, "withdraw", row["hash"], req.reason, self.clock().isoformat()))
+            result = self._transition(con, actor, row, "withdrawn")
+            result["notice"] = "Previously downloaded files cannot be recalled. Notify recipients separately if needed."
+            return result
+        return self._mutate(actor, req, f"quote.withdraw:{qid}", action)
+
     def _transition(self, con, actor, row, state):
         version = row["version"] + 1
         con.execute("UPDATE quotes SET state=?,version=?,updated_at=? WHERE id=? AND tenant=?",
@@ -274,7 +376,8 @@ class PricingService:
             # Explicit allowlist. Never serialize internal payload to a customer document.
             return {"quote_number": qid, "state": row["state"], "seller": p["seller_name"],
                     "customer": q["customer_name"], "description": q["description"],
-                    "product_id": q["product_id"], "quantity": q["quantity"], "unit": q["unit"],
+                    "product_id": q["product_id"], "product_revision": q["product_revision"],
+                    "quantity": q["quantity"], "unit": q["unit"],
                     "currency": q["currency"], "unit_price": totals["unit_price"], "total": totals["revenue"],
                     "incoterm": q["incoterm"], "named_place": q["named_place"], "edition": q["incoterms_edition"],
                     "payment_terms": q["payment_terms"], "lead_time_days": p["lead_time_days"],
@@ -299,3 +402,4 @@ class PricingService:
             return {"quote_id": qid, "matches": digest(replay) == digest(p["result"]),
                     "original_result_hash": digest(p["result"]), "replayed_result_hash": digest(replay),
                     "historical_clock": p["result"]["calculated_at"], "is_new_approval": False}
+

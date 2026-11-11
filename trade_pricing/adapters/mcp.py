@@ -7,11 +7,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import sys
-from urllib.parse import urlsplit, quote
+from urllib.parse import urlsplit, quote, urlencode
 from urllib.request import Request, build_opener, HTTPRedirectHandler, ProxyHandler
 from urllib.error import HTTPError, URLError
 from .. import __version__
-from ..models import Contract, Id, NewCase, Calculation, CompareInput, QuoteAction, CashPlan
+from ..models import (Contract, Id, NewCase, ReviseCase, Calculation, CompareInput, QuoteAction,
+                      CashPlan, PromoteScenario, PageQuery, SnapshotQuery)
 from ..errors import DomainError
 
 SUPPORTED = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"]
@@ -24,6 +25,18 @@ class CaseId(Contract):
 
 class QuoteId(Contract):
     quote_id: Id
+
+
+class SnapshotId(Contract):
+    snapshot_id: Id
+
+
+class ReviseArgs(ReviseCase):
+    case_id: Id
+
+
+class PromoteArgs(PromoteScenario):
+    case_id: Id
 
 
 class CalculateArgs(Calculation):
@@ -44,9 +57,13 @@ class Empty(Contract):
 
 TOOLS = {
     "create_pricing_case": (NewCase, "Create a real customer quotation case; does not send anything.", False),
-    "list_pricing_cases": (Empty, "List this enterprise's pricing cases.", True),
+    "revise_pricing_case": (ReviseArgs, "Revise a case using expected_revision; invalidates old quote eligibility and never transfers approval.", False),
+    "promote_pricing_scenario": (PromoteArgs, "Select a scenario: atomically revise the original case and create a new draft. Rechecks evidence, requires fresh human approval; blocked scenarios leave the case unchanged.", False),
+    "list_pricing_cases": (PageQuery, "List cases by stable creation order. Follow next_cursor using before until null.", True),
     "get_pricing_case": (CaseId, "Read a case and its immutable quote revisions.", True),
-    "list_cost_evidence": (Empty, "List finance-confirmed cost, FX and policy snapshots. This tool cannot confirm evidence.", True),
+    "list_cost_evidence": (SnapshotQuery, "List snapshots filtered by kind and revocation. Follow next_cursor using before. active_only means not revoked, not necessarily unexpired. Cannot confirm evidence.", True),
+    "get_cost_evidence": (SnapshotId, "Read an exact snapshot, including revocation status and verified stored content hash.", True),
+    "get_current_pricing_policy": (Empty, "Read the current non-revoked enterprise policy independently of cost history. Calculation still checks evidence expiry.", True),
     "calculate_quote": (CalculateArgs, "Calculate with confirmed snapshots; return blockers instead of invented costs.", False),
     "compare_scenarios": (CompareArgs, "Compare supplied quantity/price alternatives against evidence-backed cost ranges.", True),
     "submit_quote_approval": (SubmitArgs, "Submit an exact quote hash for separate human approval. Never approves.", False),
@@ -103,11 +120,16 @@ class ApiClient:
         d = model.model_dump(mode="json")
         case_id = quote(d.pop("case_id"), safe="") if "case_id" in d else None
         quote_id = quote(d.pop("quote_id"), safe="") if "quote_id" in d else None
+        snapshot_id = quote(d.pop("snapshot_id"), safe="") if "snapshot_id" in d else None
         routes = {
             "create_pricing_case": ("POST", "/v1/cases"),
+            "revise_pricing_case": ("PUT", f"/v1/cases/{case_id}"),
+            "promote_pricing_scenario": ("POST", f"/v1/cases/{case_id}/promote-scenario"),
             "list_pricing_cases": ("GET", "/v1/cases"),
             "get_pricing_case": ("GET", f"/v1/cases/{case_id}"),
             "list_cost_evidence": ("GET", "/v1/snapshots"),
+            "get_cost_evidence": ("GET", f"/v1/snapshots/{snapshot_id}"),
+            "get_current_pricing_policy": ("GET", "/v1/policies/current"),
             "calculate_quote": ("POST", f"/v1/cases/{case_id}/calculate"),
             "compare_scenarios": ("POST", f"/v1/cases/{case_id}/compare"),
             "submit_quote_approval": ("POST", f"/v1/quotes/{quote_id}/submit"),
@@ -117,7 +139,9 @@ class ApiClient:
             "evaluate_cashflow": ("POST", "/v1/cashflow"),
         }
         method, path = routes[name]
-        return self.call(method, path, d if method == "POST" else None)
+        if name in ("list_pricing_cases", "list_cost_evidence"):
+            path += "?" + urlencode({k: str(v).lower() if isinstance(v, bool) else v for k,v in d.items() if v is not None})
+        return self.call(method, path, d if method in ("POST", "PUT") else None)
 
 
 class Protocol:
@@ -154,7 +178,7 @@ class Protocol:
             return self.error(mid, -32000, "Initialize and send notifications/initialized before using tools")
         if method == "tools/list":
             return self.result(mid, {"tools": [{"name": name, "description": desc, "inputSchema": model.model_json_schema(),
-                "annotations": {"readOnlyHint": readonly, "destructiveHint": False,
+                "annotations": {"readOnlyHint": readonly, "destructiveHint": name in ("revise_pricing_case", "promote_pricing_scenario"),
                                 "idempotentHint": True, "openWorldHint": False}}
                 for name, (model, desc, readonly) in TOOLS.items()]})
         if method == "tools/call":
@@ -200,3 +224,4 @@ def run_stdio(url: str, token_file: Path):
         if response is not None:
             sys.stdout.write(json.dumps(response, ensure_ascii=False, allow_nan=False) + "\n")
             sys.stdout.flush()
+

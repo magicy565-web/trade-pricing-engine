@@ -3,7 +3,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 import json
 import sqlite3
-from fastapi import FastAPI, Depends, Request
+from typing import Literal
+from fastapi import FastAPI, Depends, Request, Query
 from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.exceptions import RequestValidationError
@@ -14,7 +15,8 @@ from .errors import DomainError
 from .store import Store
 from .service import Actor, PricingService
 from .models import (NewCase, ReviseCase, SaveCostBook, SaveFxBook, SavePolicy,
-                     RevokeSnapshot, Calculation, QuoteAction, Approval, CompareInput, CashPlan)
+                     RevokeSnapshot, Calculation, QuoteAction, Approval, CompareInput, CashPlan,
+                     PageQuery, SnapshotQuery, PromoteScenario, WithdrawQuote)
 from .documents import render_quote
 
 WEB = Path(__file__).parent / "web"
@@ -123,8 +125,8 @@ def create_app(config: ServerConfig, service: PricingService | None = None) -> F
         return app.openapi()
 
     @app.get("/v1/cases")
-    def cases(a: Actor = Depends(actor)):
-        return {"cases": svc.list_cases(a)}
+    def cases(a: Actor = Depends(actor), limit: int = Query(50, ge=1, le=100), before: int | None = Query(None, ge=1)):
+        return svc.case_page(a, PageQuery(limit=limit, before=before))
 
     @app.post("/v1/cases", status_code=201)
     def new_case(req: NewCase, a: Actor = Depends(actor)):
@@ -139,8 +141,18 @@ def create_app(config: ServerConfig, service: PricingService | None = None) -> F
         return svc.revise_case(a, case_id, req)
 
     @app.get("/v1/snapshots")
-    def snapshots(a: Actor = Depends(actor)):
-        return {"snapshots": svc.list_snapshots(a)}
+    def snapshots(a: Actor = Depends(actor), limit: int = Query(50, ge=1, le=100),
+                  before: int | None = Query(None, ge=1), kind: Literal["cost", "fx", "policy"] | None = None,
+                  active_only: bool = False):
+        return svc.snapshot_page(a, SnapshotQuery(limit=limit, before=before, kind=kind, active_only=active_only))
+
+    @app.get("/v1/snapshots/{snapshot_id}")
+    def get_snapshot(snapshot_id: str, a: Actor = Depends(actor)):
+        return svc.get_snapshot(a, snapshot_id)
+
+    @app.get("/v1/policies/current")
+    def current_policy(a: Actor = Depends(actor)):
+        return svc.current_policy(a)
 
     @app.post("/v1/cost-snapshots", status_code=201)
     def cost(req: SaveCostBook, a: Actor = Depends(actor)):
@@ -166,6 +178,10 @@ def create_app(config: ServerConfig, service: PricingService | None = None) -> F
     def compare(case_id: str, req: CompareInput, a: Actor = Depends(actor)):
         return svc.compare(a, case_id, req)
 
+    @app.post("/v1/cases/{case_id}/promote-scenario", status_code=201)
+    def promote(case_id: str, req: PromoteScenario, a: Actor = Depends(actor)):
+        return svc.promote_scenario(a, case_id, req)
+
     @app.get("/v1/quotes/{quote_id}")
     def get_quote(quote_id: str, a: Actor = Depends(actor)):
         return svc.get_quote(a, quote_id)
@@ -181,6 +197,10 @@ def create_app(config: ServerConfig, service: PricingService | None = None) -> F
     @app.post("/v1/quotes/{quote_id}/finalize")
     def finalize(quote_id: str, req: QuoteAction, a: Actor = Depends(actor)):
         return svc.finalize(a, quote_id, req)
+
+    @app.post("/v1/quotes/{quote_id}/withdraw")
+    def withdraw(quote_id: str, req: WithdrawQuote, a: Actor = Depends(actor)):
+        return svc.withdraw(a, quote_id, req)
 
     @app.get("/v1/quotes/{quote_id}/replay")
     def replay(quote_id: str, a: Actor = Depends(actor)):
@@ -203,3 +223,4 @@ def create_app(config: ServerConfig, service: PricingService | None = None) -> F
         return svc.store.verify_audit(a.tenant)
 
     return app
+

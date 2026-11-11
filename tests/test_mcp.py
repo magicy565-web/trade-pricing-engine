@@ -21,7 +21,7 @@ def ready():
 def test_lifecycle_and_tool_discovery():
     p=ready();r=p.handle({"jsonrpc":"2.0","id":2,"method":"tools/list"})
     names={x['name'] for x in r['result']['tools']}
-    assert len(names)==11 and 'calculate_quote' in names
+    assert len(names)==15 and 'calculate_quote' in names
     assert all('approve' not in name and 'finalize' not in name and 'confirm' not in name for name in names)
 
 
@@ -63,3 +63,4 @@ def test_unsupported_version_negotiates_explicit_legacy_version():
 
 def test_repeated_initialization_rejected():
     assert ready().handle({"jsonrpc":"2.0","id":8,"method":"initialize","params":{}})['error']['code']==-32600
+

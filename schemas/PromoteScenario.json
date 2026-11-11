@@ -1,0 +1,164 @@
+{
+  "$defs": {
+    "Scenario": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "quantity": {
+          "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,8})?$",
+          "title": "Quantity",
+          "type": "string"
+        },
+        "cost_snapshot_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+          "title": "Cost Snapshot Id",
+          "type": "string"
+        },
+        "proposed_unit_price": {
+          "anyOf": [
+            {
+              "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,8})?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposed Unit Price"
+        },
+        "incoterm": {
+          "anyOf": [
+            {
+              "enum": [
+                "EXW",
+                "FCA",
+                "FOB",
+                "CIF",
+                "DAP",
+                "DDP"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Incoterm"
+        },
+        "named_place": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Named Place"
+        },
+        "transport": {
+          "anyOf": [
+            {
+              "enum": [
+                "sea",
+                "inland_waterway",
+                "air",
+                "road",
+                "rail",
+                "multimodal"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transport"
+        },
+        "fca_delivery": {
+          "anyOf": [
+            {
+              "enum": [
+                "seller_premises",
+                "other_place"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fca Delivery"
+        },
+        "payment_terms": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payment Terms"
+        }
+      },
+      "required": [
+        "label",
+        "quantity",
+        "cost_snapshot_id"
+      ],
+      "title": "Scenario",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "fx_snapshot_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Fx Snapshot Id",
+      "type": "string"
+    },
+    "policy_snapshot_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Policy Snapshot Id",
+      "type": "string"
+    },
+    "scenario": {
+      "$ref": "#/$defs/Scenario"
+    }
+  },
+  "required": [
+    "request_id",
+    "expected_revision",
+    "fx_snapshot_id",
+    "policy_snapshot_id",
+    "scenario"
+  ],
+  "title": "PromoteScenario",
+  "type": "object"
+}

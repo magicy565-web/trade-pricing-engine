@@ -15,7 +15,7 @@ with tempfile.TemporaryDirectory() as td:
     q=svc.calculate(AGENT,c['id'],req);q=svc.submit(AGENT,q['id'],QuoteAction(**action_for(q)))
     q=svc.approve(APPROVER,q['id'],Approval(**action_for(q,'approval'),decision='approve',reason='Synthetic render validation'))
     q=svc.finalize(APPROVER,q['id'],QuoteAction(**action_for(q,'finalize')))
-    routes={'/v1/cases':{'cases':svc.list_cases(AGENT)},'/v1/snapshots':{'snapshots':svc.list_snapshots(AGENT)},
+    routes={'/v1/cases?limit=100':svc.case_page(AGENT,PageQuery(limit=100)),'/v1/snapshots?limit=100':svc.snapshot_page(AGENT,SnapshotQuery(limit=100)),
             '/v1/cases/'+c['id']:svc.get_case(AGENT,c['id']),'/v1/quotes/'+q['id']:svc.get_quote(AGENT,q['id'])}
     with sync_playwright() as p:
         browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
@@ -39,3 +39,4 @@ report={'status':'passed','mode':'offline_browser_component_render','synthetic_o
         'not_verified':'Real browser-to-localhost navigation was blocked by environment administrator policy; full browser E2E is not claimed.'}
 (ROOT/'verification/ui-render.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report,indent=2))
+

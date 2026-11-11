@@ -70,12 +70,22 @@ def main():
             messages=[{'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'verification','version':'1'}}},
                       {'jsonrpc':'2.0','method':'notifications/initialized'},
                       {'jsonrpc':'2.0','id':2,'method':'tools/list'},
-                      {'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'get_pricing_case','arguments':{'case_id':c['id']}}}]
+                      {'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'get_pricing_case','arguments':{'case_id':c['id']}}},
+                      {'jsonrpc':'2.0','id':4,'method':'tools/call','params':{'name':'compare_scenarios','arguments':{'case_id':c['id'],'expected_revision':1,'fx_snapshot_id':fx['id'],'policy_snapshot_id':po['id'],'scenarios':[{'label':'Synthetic 150m option','quantity':'150','cost_snapshot_id':co['id'],'proposed_unit_price':'15'}]}}},
+                      {'jsonrpc':'2.0','id':5,'method':'tools/call','params':{'name':'promote_pricing_scenario','arguments':{'case_id':c['id'],'request_id':'mcp-select','expected_revision':1,'fx_snapshot_id':fx['id'],'policy_snapshot_id':po['id'],'scenario':{'label':'Synthetic 150m option','quantity':'150','cost_snapshot_id':co['id'],'proposed_unit_price':'15'}}}},
+                      {'jsonrpc':'2.0','id':6,'method':'tools/call','params':{'name':'revise_pricing_case','arguments':{'case_id':c['id'],'request_id':'mcp-revise','expected_revision':2,'case':case}}},
+                      {'jsonrpc':'2.0','id':7,'method':'tools/call','params':{'name':'calculate_quote','arguments':{**request,'request_id':'mcp-recalculate','expected_revision':3,'case_id':c['id']}}}]
             mcp=subprocess.run([sys.executable,'-m','trade_pricing','mcp','--url',url,'--token-file',str(td/'private/agent.token')],cwd=ROOT,
                 input=''.join(json.dumps(m)+'\n' for m in messages),text=True,capture_output=True,timeout=20,check=True)
             replies=[json.loads(x) for x in mcp.stdout.splitlines()]
-            assert len(replies)==3 and len(replies[1]['result']['tools'])==11
+            assert len(replies)==7 and len(replies[1]['result']['tools'])==15
             assert replies[2]['result']['structuredContent']['id']==c['id'];checks.append('real_stdio_subprocess_to_http_roundtrip')
+            assert all(not r['result'].get('isError',False) for r in replies[2:])
+            assert replies[4]['result']['structuredContent']['case_revision']==2
+            assert replies[4]['result']['structuredContent']['quote']['case']['quantity']=='150'
+            assert replies[5]['result']['structuredContent']['revision']==3
+            q=replies[6]['result']['structuredContent'];assert q['case_revision']==3 and q['state']=='draft'
+            checks.append('real_mcp_compare_promote_revise_recalculate')
             forbidden=subprocess.run([sys.executable,'-m','trade_pricing','mcp','--url',url,'--token-file',str(td/'private/admin.token')],cwd=ROOT,input='',text=True,capture_output=True,timeout=20)
             assert forbidden.returncode!=0;checks.append('mcp_rejects_privileged_token')
             def bind(q,rid):return {'request_id':rid,'expected_version':q['version'],'content_hash':q['content_hash']}
@@ -87,7 +97,7 @@ def main():
             assert current['state']=='issued'
             public=call(f"/v1/quotes/{q['id']}/customer")
             html=call(f"/v1/quotes/{q['id']}/document")
-            assert public['delivery_status']=='NOT_SENT' and '1150.00' not in html
+            assert public['delivery_status']=='NOT_SENT' and '1150.00' not in html and public['product_revision']=='rev1' and 'Revision rev1' in html
             assert call('/v1/audit/verify')['valid'];checks.append('audit_chain_verified')
             server.terminate();server.wait(timeout=10)
             server=subprocess.Popen([sys.executable,'-m','trade_pricing','serve','--config',str(cfg)],cwd=ROOT,stdout=log,stderr=log)
@@ -97,6 +107,16 @@ def main():
                 except Exception:time.sleep(.1)
             else:raise RuntimeError('Persistent state was not recovered')
             checks.append('process_restart_recovers_issued_quote')
+            withdrawn=call(f"/v1/quotes/{q['id']}/withdraw",'approver',{**bind(q,'live-withdraw'),'reason':'Synthetic specification correction'})
+            assert withdrawn['state']=='withdrawn'
+            assert call(f"/v1/quotes/{q['id']}")['current_blocker']['code']=='QUOTE_WITHDRAWN'
+            from urllib.error import HTTPError
+            try:call(f"/v1/quotes/{q['id']}/customer")
+            except HTTPError as exc:assert exc.code==409
+            else:raise AssertionError('Withdrawn quote was exported')
+            assert call(f"/v1/quotes/{q['id']}/replay")['matches']
+            assert call('/v1/audit/verify')['valid']
+            checks.append('withdrawal_blocks_export_preserves_replay_and_audit')
             report={'status':'passed','at':datetime.now(timezone.utc).isoformat(),'synthetic_only':True,
                     'real_network':'localhost HTTP only','mcp_protocol':'2025-11-25 tools-only stdio',
                     'checks':checks,'check_count':len(checks),'external_buyers_contacted':0,
@@ -110,3 +130,4 @@ def main():
 
 
 if __name__=='__main__':main()
+

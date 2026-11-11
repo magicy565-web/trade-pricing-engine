@@ -217,6 +217,10 @@ class Approval(QuoteAction):
     reason: Text
 
 
+class WithdrawQuote(QuoteAction):
+    reason: Annotated[str, Field(strict=True, min_length=1, max_length=500, pattern=r"\S")]
+
+
 class Scenario(Contract):
     label: Text
     quantity: Amount
@@ -230,8 +234,16 @@ class Scenario(Contract):
 
     @model_validator(mode="after")
     def explicit_terms(self):
+        if Decimal(self.quantity) <= 0:
+            raise ValueError("scenario quantity must be positive")
+        if self.proposed_unit_price is not None and Decimal(self.proposed_unit_price) <= 0:
+            raise ValueError("proposed price must be positive")
         if self.incoterm is not None and (self.named_place is None or self.transport is None):
             raise ValueError("a term alternative requires an explicit named place and transport mode")
+        if self.incoterm == "FCA" and self.fca_delivery is None:
+            raise ValueError("an FCA alternative requires an explicit delivery variant")
+        if self.incoterm is not None and self.incoterm != "FCA" and self.fca_delivery is not None:
+            raise ValueError("fca_delivery applies only to FCA")
         return self
 
 
@@ -240,6 +252,24 @@ class CompareInput(Contract):
     fx_snapshot_id: Id
     policy_snapshot_id: Id
     scenarios: list[Scenario] = Field(min_length=1, max_length=20)
+
+
+class PromoteScenario(Contract):
+    request_id: Id
+    expected_revision: Annotated[int, Field(strict=True, ge=1)]
+    fx_snapshot_id: Id
+    policy_snapshot_id: Id
+    scenario: Scenario
+
+
+class PageQuery(Contract):
+    limit: Annotated[int, Field(strict=True, ge=1, le=100)] = 50
+    before: Annotated[int, Field(strict=True, ge=1)] | None = None
+
+
+class SnapshotQuery(PageQuery):
+    kind: Literal["cost", "fx", "policy"] | None = None
+    active_only: Annotated[bool, Field(strict=True)] = False
 
 
 class CashEvent(Contract):
@@ -256,3 +286,4 @@ class CashPlan(Contract):
     horizon_days: Annotated[int, Field(strict=True, ge=1, le=730)]
     evidence: Evidence
     events: list[CashEvent] = Field(min_length=1, max_length=500)
+

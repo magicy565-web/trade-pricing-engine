@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "limit": {
+      "default": 50,
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+    },
+    "before": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Before"
+    }
+  },
+  "title": "PageQuery",
+  "type": "object"
+}

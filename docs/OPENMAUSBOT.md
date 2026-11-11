@@ -20,4 +20,10 @@
 
 ## 最小宿主验收
 
-验证 11 个工具确实出现；agent 只能提交审核，不能确认成本/批准；成本不足得到明确阻断；真实案件变更后旧报价无法继续；批准后对客字段不泄露成本；断开重连后同一 request_id 不新增报价。完成这些步骤并保存宿主真实工具回执后，才能标记“OpenMausBot 已接通”。
+验证 15 个工具确实出现；agent 只能提交审核，不能确认成本/批准；成本不足得到明确阻断；真实案件变更后旧报价无法继续；批准后对客字段不泄露成本；断开重连后同一 request_id 不新增报价。完成这些步骤并保存宿主真实工具回执后，才能标记“OpenMausBot 已接通”。
+
+
+
+v0.2 增加 revise_pricing_case、promote_pricing_scenario、get_cost_evidence、get_current_pricing_policy。选定比较方案时，优先调用 promote_pricing_scenario：一次操作更新原案件并生成新草稿；不要创建重复案件，也不要把旧审批附到新报价。所有变更保留相同 request_id 重试；版本冲突后先重新读取并确认新输入。
+
+list_cost_evidence 可按 kind 和 active_only 筛选，list_pricing_cases 和 list_cost_evidence 都需要跟随 next_cursor。审批和撤回仍由独立人员使用网页或受认证 HTTP 完成。真实 OpenMausBot 宿主尚未验收；本轮验证的是独立 MCP 子进程到本地 HTTP 的实际调用。

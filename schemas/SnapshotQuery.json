@@ -1,0 +1,49 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "limit": {
+      "default": 50,
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+    },
+    "before": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Before"
+    },
+    "kind": {
+      "anyOf": [
+        {
+          "enum": [
+            "cost",
+            "fx",
+            "policy"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Kind"
+    },
+    "active_only": {
+      "default": false,
+      "title": "Active Only",
+      "type": "boolean"
+    }
+  },
+  "title": "SnapshotQuery",
+  "type": "object"
+}

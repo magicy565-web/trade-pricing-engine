@@ -1,0 +1,22 @@
+{
+  "release": "0.2.0",
+  "baseline_commit": "46d845f94b3884cae1954f4d9d9932bea04b7bd2",
+  "python": "3.12.14",
+  "platform": "Linux",
+  "pytest": {
+    "passed": 128,
+    "failed": 0,
+    "skipped": 0
+  },
+  "process_smoke_checks": 10,
+  "javascript_syntax": "passed",
+  "schemas": 24,
+  "browser_e2e": {
+    "status": "blocked",
+    "stage": "chromium_launch",
+    "reason": "process_singleton_posix socket() failed: Operation not permitted"
+  },
+  "synthetic_only": true,
+  "openmausbot_host_verified": false,
+  "external_messages_sent": 0
+}
