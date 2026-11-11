@@ -1,0 +1,52 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "cost_snapshot_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Cost Snapshot Id",
+      "type": "string"
+    },
+    "fx_snapshot_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Fx Snapshot Id",
+      "type": "string"
+    },
+    "policy_snapshot_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Policy Snapshot Id",
+      "type": "string"
+    },
+    "proposed_unit_price": {
+      "anyOf": [
+        {
+          "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,8})?$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Proposed Unit Price"
+    }
+  },
+  "required": [
+    "request_id",
+    "expected_revision",
+    "cost_snapshot_id",
+    "fx_snapshot_id",
+    "policy_snapshot_id"
+  ],
+  "title": "Calculation",
+  "type": "object"
+}

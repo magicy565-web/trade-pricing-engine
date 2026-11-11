@@ -1,0 +1,178 @@
+{
+  "$defs": {
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "reference": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "valid_until": {
+          "format": "date-time",
+          "title": "Valid Until",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "supplier_quote",
+            "freight_quote",
+            "cost_sheet",
+            "financial_policy",
+            "manual_confirmation"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference",
+        "sha256",
+        "observed_at",
+        "valid_until",
+        "kind"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "label": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Label",
+      "type": "string"
+    },
+    "category": {
+      "enum": [
+        "product",
+        "packaging",
+        "origin_loading",
+        "origin_transport",
+        "export_clearance",
+        "export_handling",
+        "main_carriage",
+        "insurance",
+        "destination_handling",
+        "destination_transport",
+        "import_clearance",
+        "import_duties",
+        "import_taxes",
+        "other"
+      ],
+      "title": "Category",
+      "type": "string"
+    },
+    "amount": {
+      "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,8})?$",
+      "title": "Amount",
+      "type": "string"
+    },
+    "currency": {
+      "enum": [
+        "USD",
+        "CNY",
+        "EUR",
+        "GBP",
+        "JPY",
+        "CAD",
+        "AUD",
+        "AED",
+        "KWD"
+      ],
+      "title": "Currency",
+      "type": "string"
+    },
+    "basis": {
+      "enum": [
+        "per_unit",
+        "fixed"
+      ],
+      "title": "Basis",
+      "type": "string"
+    },
+    "unit": {
+      "anyOf": [
+        {
+          "enum": [
+            "piece",
+            "meter",
+            "kilogram",
+            "set",
+            "pair"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Unit"
+    },
+    "payer": {
+      "default": "seller",
+      "enum": [
+        "seller",
+        "buyer"
+      ],
+      "title": "Payer",
+      "type": "string"
+    },
+    "covers": {
+      "items": {
+        "enum": [
+          "product",
+          "packaging",
+          "origin_loading",
+          "origin_transport",
+          "export_clearance",
+          "export_handling",
+          "main_carriage",
+          "insurance",
+          "destination_handling",
+          "destination_transport",
+          "import_clearance",
+          "import_duties",
+          "import_taxes",
+          "other"
+        ],
+        "type": "string"
+      },
+      "maxItems": 14,
+      "title": "Covers",
+      "type": "array"
+    },
+    "evidence": {
+      "$ref": "#/$defs/Evidence"
+    }
+  },
+  "required": [
+    "id",
+    "label",
+    "category",
+    "amount",
+    "currency",
+    "basis",
+    "evidence"
+  ],
+  "title": "CostLine",
+  "type": "object"
+}

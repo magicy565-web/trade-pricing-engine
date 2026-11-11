@@ -1,0 +1,4 @@
+No public open-source license is granted by this delivery.
+Repository owner: magicy565-web.
+Select an appropriate license before changing the repository to public.
+Third-party dependencies retain their own licenses; their source is not vendored here.

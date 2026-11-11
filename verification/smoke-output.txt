@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "at": "2026-11-11T04:35:40.617212+00:00",
+  "synthetic_only": true,
+  "real_network": "localhost HTTP only",
+  "mcp_protocol": "2025-11-25 tools-only stdio",
+  "checks": [
+    "empty_database_no_business_seed",
+    "real_http_exact_calculation",
+    "http_idempotency",
+    "real_stdio_subprocess_to_http_roundtrip",
+    "mcp_rejects_privileged_token",
+    "real_http_approver_role_approval_and_finalize",
+    "audit_chain_verified",
+    "process_restart_recovers_issued_quote"
+  ],
+  "check_count": 8,
+  "external_buyers_contacted": 0,
+  "openmausbot_host_verified": false,
+  "github_remote_created": false,
+  "output_sample": {
+    "revenue": "1500.00",
+    "cost": "1150.00",
+    "revenue_fee": "30.00",
+    "contribution": "320.00",
+    "currency": "USD"
+  }
+}

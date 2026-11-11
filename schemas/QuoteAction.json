@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "expected_version": {
+      "minimum": 1,
+      "title": "Expected Version",
+      "type": "integer"
+    },
+    "content_hash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Content Hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "request_id",
+    "expected_version",
+    "content_hash"
+  ],
+  "title": "QuoteAction",
+  "type": "object"
+}

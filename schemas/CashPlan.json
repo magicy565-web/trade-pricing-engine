@@ -1,0 +1,144 @@
+{
+  "$defs": {
+    "CashEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "day": {
+          "maximum": 730,
+          "minimum": 0,
+          "title": "Day",
+          "type": "integer"
+        },
+        "direction": {
+          "enum": [
+            "inflow",
+            "outflow"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,8})?$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "CNY",
+            "EUR",
+            "GBP",
+            "JPY",
+            "CAD",
+            "AUD",
+            "AED",
+            "KWD"
+          ],
+          "title": "Currency",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "day",
+        "direction",
+        "amount",
+        "currency",
+        "label"
+      ],
+      "title": "CashEvent",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "reference": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "valid_until": {
+          "format": "date-time",
+          "title": "Valid Until",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "supplier_quote",
+            "freight_quote",
+            "cost_sheet",
+            "financial_policy",
+            "manual_confirmation"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference",
+        "sha256",
+        "observed_at",
+        "valid_until",
+        "kind"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "fx_snapshot_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Fx Snapshot Id",
+      "type": "string"
+    },
+    "annual_rate": {
+      "pattern": "^(0(\\.[0-9]{1,12})?|1(\\.0{1,12})?)$",
+      "title": "Annual Rate",
+      "type": "string"
+    },
+    "horizon_days": {
+      "maximum": 730,
+      "minimum": 1,
+      "title": "Horizon Days",
+      "type": "integer"
+    },
+    "evidence": {
+      "$ref": "#/$defs/Evidence"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/CashEvent"
+      },
+      "maxItems": 500,
+      "minItems": 1,
+      "title": "Events",
+      "type": "array"
+    }
+  },
+  "required": [
+    "fx_snapshot_id",
+    "annual_rate",
+    "horizon_days",
+    "evidence",
+    "events"
+  ],
+  "title": "CashPlan",
+  "type": "object"
+}

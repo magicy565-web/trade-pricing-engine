@@ -1,0 +1,8 @@
+{
+  "installed_wheel_import": "passed",
+  "api_import": "passed",
+  "web_assets_packaged": true,
+  "version": "0.1.0",
+  "dependency_environment": "existing verified environment; no fresh dependency download",
+  "isolated_venv_dependency_install": "not verified: nested venv lacked FastAPI; target install tested instead"
+}

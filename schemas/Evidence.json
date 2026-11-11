@@ -1,0 +1,46 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "reference": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Reference",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Sha256",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "valid_until": {
+      "format": "date-time",
+      "title": "Valid Until",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "supplier_quote",
+        "freight_quote",
+        "cost_sheet",
+        "financial_policy",
+        "manual_confirmation"
+      ],
+      "title": "Kind",
+      "type": "string"
+    }
+  },
+  "required": [
+    "reference",
+    "sha256",
+    "observed_at",
+    "valid_until",
+    "kind"
+  ],
+  "title": "Evidence",
+  "type": "object"
+}

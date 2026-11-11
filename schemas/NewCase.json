@@ -1,0 +1,179 @@
+{
+  "$defs": {
+    "CaseInput": {
+      "additionalProperties": false,
+      "properties": {
+        "external_ref": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "External Ref",
+          "type": "string"
+        },
+        "customer_name": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Customer Name",
+          "type": "string"
+        },
+        "product_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+          "title": "Product Id",
+          "type": "string"
+        },
+        "product_revision": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+          "title": "Product Revision",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "quantity": {
+          "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,8})?$",
+          "title": "Quantity",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "piece",
+            "meter",
+            "kilogram",
+            "set",
+            "pair"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "CNY",
+            "EUR",
+            "GBP",
+            "JPY",
+            "CAD",
+            "AUD",
+            "AED",
+            "KWD"
+          ],
+          "title": "Currency",
+          "type": "string"
+        },
+        "incoterm": {
+          "enum": [
+            "EXW",
+            "FCA",
+            "FOB",
+            "CIF",
+            "DAP",
+            "DDP"
+          ],
+          "title": "Incoterm",
+          "type": "string"
+        },
+        "incoterms_edition": {
+          "const": "2020",
+          "default": "2020",
+          "title": "Incoterms Edition",
+          "type": "string"
+        },
+        "named_place": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Named Place",
+          "type": "string"
+        },
+        "transport": {
+          "enum": [
+            "sea",
+            "inland_waterway",
+            "air",
+            "road",
+            "rail",
+            "multimodal"
+          ],
+          "title": "Transport",
+          "type": "string"
+        },
+        "fca_delivery": {
+          "anyOf": [
+            {
+              "enum": [
+                "seller_premises",
+                "other_place"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fca Delivery"
+        },
+        "payment_terms": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Payment Terms",
+          "type": "string"
+        },
+        "valid_until": {
+          "format": "date-time",
+          "title": "Valid Until",
+          "type": "string"
+        },
+        "max_lead_days": {
+          "anyOf": [
+            {
+              "maximum": 730,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Lead Days"
+        }
+      },
+      "required": [
+        "external_ref",
+        "customer_name",
+        "product_id",
+        "product_revision",
+        "description",
+        "quantity",
+        "unit",
+        "currency",
+        "incoterm",
+        "named_place",
+        "transport",
+        "payment_terms",
+        "valid_until"
+      ],
+      "title": "CaseInput",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "case": {
+      "$ref": "#/$defs/CaseInput"
+    }
+  },
+  "required": [
+    "request_id",
+    "case"
+  ],
+  "title": "NewCase",
+  "type": "object"
+}

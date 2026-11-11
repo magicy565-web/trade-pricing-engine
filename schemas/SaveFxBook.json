@@ -1,0 +1,135 @@
+{
+  "$defs": {
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "reference": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "valid_until": {
+          "format": "date-time",
+          "title": "Valid Until",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "supplier_quote",
+            "freight_quote",
+            "cost_sheet",
+            "financial_policy",
+            "manual_confirmation"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference",
+        "sha256",
+        "observed_at",
+        "valid_until",
+        "kind"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "FxBook": {
+      "additionalProperties": false,
+      "properties": {
+        "target_currency": {
+          "enum": [
+            "USD",
+            "CNY",
+            "EUR",
+            "GBP",
+            "JPY",
+            "CAD",
+            "AUD",
+            "AED",
+            "KWD"
+          ],
+          "title": "Target Currency",
+          "type": "string"
+        },
+        "rates": {
+          "items": {
+            "$ref": "#/$defs/FxItem"
+          },
+          "maxItems": 8,
+          "title": "Rates",
+          "type": "array"
+        }
+      },
+      "required": [
+        "target_currency"
+      ],
+      "title": "FxBook",
+      "type": "object"
+    },
+    "FxItem": {
+      "additionalProperties": false,
+      "properties": {
+        "source_currency": {
+          "enum": [
+            "USD",
+            "CNY",
+            "EUR",
+            "GBP",
+            "JPY",
+            "CAD",
+            "AUD",
+            "AED",
+            "KWD"
+          ],
+          "title": "Source Currency",
+          "type": "string"
+        },
+        "rate": {
+          "pattern": "^(0|[1-9][0-9]{0,6})(\\.[0-9]{1,12})?$",
+          "title": "Rate",
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        }
+      },
+      "required": [
+        "source_currency",
+        "rate",
+        "evidence"
+      ],
+      "title": "FxItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "fx_book": {
+      "$ref": "#/$defs/FxBook"
+    }
+  },
+  "required": [
+    "request_id",
+    "fx_book"
+  ],
+  "title": "SaveFxBook",
+  "type": "object"
+}

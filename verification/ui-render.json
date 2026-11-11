@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "mode": "offline_browser_component_render",
+  "synthetic_only": true,
+  "browser_network_used": false,
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 1100
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "horizontal_overflow": false,
+  "page_errors": [],
+  "not_verified": "Real browser-to-localhost navigation was blocked by environment administrator policy; full browser E2E is not claimed."
+}

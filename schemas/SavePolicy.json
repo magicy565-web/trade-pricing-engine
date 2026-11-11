@@ -1,0 +1,119 @@
+{
+  "$defs": {
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "reference": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "valid_until": {
+          "format": "date-time",
+          "title": "Valid Until",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "supplier_quote",
+            "freight_quote",
+            "cost_sheet",
+            "financial_policy",
+            "manual_confirmation"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference",
+        "sha256",
+        "observed_at",
+        "valid_until",
+        "kind"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Policy": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "minimum_margin": {
+          "pattern": "^(0(\\.[0-9]{1,12})?|1(\\.0{1,12})?)$",
+          "title": "Minimum Margin",
+          "type": "string"
+        },
+        "target_margin": {
+          "pattern": "^(0(\\.[0-9]{1,12})?|1(\\.0{1,12})?)$",
+          "title": "Target Margin",
+          "type": "string"
+        },
+        "revenue_fee_rate": {
+          "pattern": "^(0(\\.[0-9]{1,12})?|1(\\.0{1,12})?)$",
+          "title": "Revenue Fee Rate",
+          "type": "string"
+        },
+        "unit_price_decimals": {
+          "default": 4,
+          "maximum": 6,
+          "minimum": 2,
+          "title": "Unit Price Decimals",
+          "type": "integer"
+        },
+        "fee_note": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Fee Note",
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        }
+      },
+      "required": [
+        "name",
+        "minimum_margin",
+        "target_margin",
+        "revenue_fee_rate",
+        "fee_note",
+        "evidence"
+      ],
+      "title": "Policy",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "policy": {
+      "$ref": "#/$defs/Policy"
+    }
+  },
+  "required": [
+    "request_id",
+    "policy"
+  ],
+  "title": "SavePolicy",
+  "type": "object"
+}

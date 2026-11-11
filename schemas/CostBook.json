@@ -1,0 +1,313 @@
+{
+  "$defs": {
+    "CostLine": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "product",
+            "packaging",
+            "origin_loading",
+            "origin_transport",
+            "export_clearance",
+            "export_handling",
+            "main_carriage",
+            "insurance",
+            "destination_handling",
+            "destination_transport",
+            "import_clearance",
+            "import_duties",
+            "import_taxes",
+            "other"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,8})?$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "CNY",
+            "EUR",
+            "GBP",
+            "JPY",
+            "CAD",
+            "AUD",
+            "AED",
+            "KWD"
+          ],
+          "title": "Currency",
+          "type": "string"
+        },
+        "basis": {
+          "enum": [
+            "per_unit",
+            "fixed"
+          ],
+          "title": "Basis",
+          "type": "string"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "enum": [
+                "piece",
+                "meter",
+                "kilogram",
+                "set",
+                "pair"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "payer": {
+          "default": "seller",
+          "enum": [
+            "seller",
+            "buyer"
+          ],
+          "title": "Payer",
+          "type": "string"
+        },
+        "covers": {
+          "items": {
+            "enum": [
+              "product",
+              "packaging",
+              "origin_loading",
+              "origin_transport",
+              "export_clearance",
+              "export_handling",
+              "main_carriage",
+              "insurance",
+              "destination_handling",
+              "destination_transport",
+              "import_clearance",
+              "import_duties",
+              "import_taxes",
+              "other"
+            ],
+            "type": "string"
+          },
+          "maxItems": 14,
+          "title": "Covers",
+          "type": "array"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "category",
+        "amount",
+        "currency",
+        "basis",
+        "evidence"
+      ],
+      "title": "CostLine",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "reference": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "valid_until": {
+          "format": "date-time",
+          "title": "Valid Until",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "supplier_quote",
+            "freight_quote",
+            "cost_sheet",
+            "financial_policy",
+            "manual_confirmation"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference",
+        "sha256",
+        "observed_at",
+        "valid_until",
+        "kind"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "product_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Product Id",
+      "type": "string"
+    },
+    "product_revision": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$",
+      "title": "Product Revision",
+      "type": "string"
+    },
+    "incoterm": {
+      "enum": [
+        "EXW",
+        "FCA",
+        "FOB",
+        "CIF",
+        "DAP",
+        "DDP"
+      ],
+      "title": "Incoterm",
+      "type": "string"
+    },
+    "named_place": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Named Place",
+      "type": "string"
+    },
+    "transport": {
+      "enum": [
+        "sea",
+        "inland_waterway",
+        "air",
+        "road",
+        "rail",
+        "multimodal"
+      ],
+      "title": "Transport",
+      "type": "string"
+    },
+    "fca_delivery": {
+      "anyOf": [
+        {
+          "enum": [
+            "seller_premises",
+            "other_place"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Fca Delivery"
+    },
+    "payment_terms": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Payment Terms",
+      "type": "string"
+    },
+    "quantity_min": {
+      "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,8})?$",
+      "title": "Quantity Min",
+      "type": "string"
+    },
+    "quantity_max": {
+      "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,8})?$",
+      "title": "Quantity Max",
+      "type": "string"
+    },
+    "unit": {
+      "enum": [
+        "piece",
+        "meter",
+        "kilogram",
+        "set",
+        "pair"
+      ],
+      "title": "Unit",
+      "type": "string"
+    },
+    "lead_time_days": {
+      "maximum": 730,
+      "minimum": 1,
+      "title": "Lead Time Days",
+      "type": "integer"
+    },
+    "tax_basis": {
+      "const": "net_nonrecoverable_confirmed",
+      "title": "Tax Basis",
+      "type": "string"
+    },
+    "scope_note": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Scope Note",
+      "type": "string"
+    },
+    "evidence": {
+      "$ref": "#/$defs/Evidence"
+    },
+    "lines": {
+      "items": {
+        "$ref": "#/$defs/CostLine"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "title": "Lines",
+      "type": "array"
+    }
+  },
+  "required": [
+    "product_id",
+    "product_revision",
+    "incoterm",
+    "named_place",
+    "transport",
+    "payment_terms",
+    "quantity_min",
+    "quantity_max",
+    "unit",
+    "lead_time_days",
+    "tax_basis",
+    "scope_note",
+    "evidence",
+    "lines"
+  ],
+  "title": "CostBook",
+  "type": "object"
+}
