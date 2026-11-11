@@ -18,6 +18,7 @@ from .models import (NewCase, ReviseCase, SaveCostBook, SaveFxBook, SavePolicy,
                      RevokeSnapshot, Calculation, QuoteAction, Approval, CompareInput, CashPlan,
                      PageQuery, SnapshotQuery, PromoteScenario, WithdrawQuote)
 from .documents import render_quote
+from . import intake
 
 WEB = Path(__file__).parent / "web"
 MAX_BODY = 1_048_576
@@ -64,6 +65,8 @@ def create_app(config: ServerConfig, service: PricingService | None = None) -> F
     svc = service or PricingService(Store(config.database), config.seller_name)
     app = FastAPI(title="Trade Pricing Engine", version=__version__, docs_url=None,
                   redoc_url=None, openapi_url=None)
+    from . import intake
+    intake.initialize(svc.store)
     app.state.service = svc
     app.add_middleware(BodyLimit)
     hostname = urlsplit(config.origin).hostname
@@ -101,6 +104,18 @@ def create_app(config: ServerConfig, service: PricingService | None = None) -> F
         if credentials is None or credentials.scheme.lower() != "bearer":
             raise DomainError("UNAUTHORIZED", "Bearer token required", 401)
         return config.authenticate(credentials.credentials)
+
+    @app.post("/v1/supplier-quotes", status_code=201)
+    def import_supplier(req: intake.ImportSupplierQuote, a: Actor = Depends(actor)):
+        return intake.import_quote(svc, a, req)
+
+    @app.get("/v1/supplier-quotes/{intake_id}")
+    def supplier_detail(intake_id: str, a: Actor = Depends(actor)):
+        return intake.get_intake(svc, a, intake_id)
+
+    @app.post("/v1/supplier-quotes/{intake_id}/confirm", status_code=201)
+    def supplier_confirm(intake_id: str, req: intake.ConfirmSupplierCost, a: Actor = Depends(actor)):
+        return intake.confirm_cost(svc, a, intake_id, req)
 
     @app.get("/health")
     def health():
